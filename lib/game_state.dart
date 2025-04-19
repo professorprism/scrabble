@@ -11,6 +11,8 @@ import "said_state.dart";
 
 const int BOARD_SIZE = 15;
 
+// For now this is simply a letter.  In the future we
+// could add scoring information, 'double letter' etc.
 class Space
 {
   String letter;
@@ -19,32 +21,43 @@ class Space
 
 class GameState
 {
-  bool iStart;
-  int score; // bool myTurn;
-  int phase; // 0=not my turn, 1=ready to put letters, 2=refill the tray
-             // and send turn to other player
+  bool iStart; // true iff this player gets the first turn.
+  int score; // just a letter count at this point.
+
+  // phase really controls the flow of the game.  Each phase allows
+  // certain actions, and when you do an action, it potentially advances
+  // the phase to something else.
+  int phase; // 0=not my turn, 1=my turn, ready to put letters, 2=refill the tray
+             // and send turn to other player (phase=0 for us).
              // 3=refill the tray and go to phase 1 (you are first player)
+
+  // mover is also a flow controller, just two states, letter or blank.  
   String mover; // a letter that is being moved from tray to board.
                 // "" if not in moving process.
-  List<String> tray;
 
-  // scrabble particulars
-  List<List<Space>> board;
-  List<String> bag;
+  List<String> tray; // up to 7 letters you can place on the board
 
-  GameState( this.iStart, this.score, // this.myTurn,  
+  List<List<Space>> board; // where the letters are played
+     // the order is a column of rows
+  List<String> bag; // letters left to be used
+
+  GameState( this.iStart, this.score,   
             { required this.board, required this.bag,
               required this.tray, required this.phase,
               required this.mover,
             } 
            );
 
-  GameState.init( this.iStart, this.score, // this.myTurn,  
-                )
+  // This constructor only needs to know whether you are the 
+  // first player or not.  Everything else is the same for
+  // all players all games.
+  GameState.init( this.iStart )
   : board = boardInit(), bag = bagInit(), 
-    tray = [], phase=iStart?3:2, mover=''
+    tray = [], phase=iStart?3:2, mover='',
+    score = 0
   ;
 
+  // builds a blank board
   static List<List<Space>> boardInit()
   { List<List<Space>> b = [];
     for ( int y=0; y<BOARD_SIZE; y++ )
@@ -58,6 +71,9 @@ class GameState
     return b;
   }
 
+  // initial letter bag
+  // note: we do not store the point values for letters.  
+  // All letters are worth one point.
   static List<String> bagInit()
   { /* 0 points: blank x2
       1 point: E ×12, A ×9, I ×9, O ×8, N ×6, R ×6, T ×6, L ×4, S ×4, U ×4
@@ -82,35 +98,41 @@ class GameState
   }
 }
 
+// This is the main controller for GameState.  
 class GameCubit extends Cubit<GameState>
 {
   static final String d = ".";
-  GameCubit( bool myt ): super( GameState.init( myt, 0,   )); 
+  GameCubit( bool myt ): super( GameState.init( myt )); 
 
   // move a random letter from the bag to this player's tray.
-   void grab( BuildContext context  )
+  // and send a message to the other player's program that this
+  // letter is no longer in the bag.
+  void grab( BuildContext context  )
   { int le = state.bag.length; 
-    if ( le > 0 )
+    if ( le > 0 ) // if bag is not empty ...
     {
       int pickn = Random().nextInt(le);
       List<String> b = state.bag;
       String ch = b[pickn];
-      b.remove(ch);
-      List<String> t = state.tray;
-      t.add(ch);
+      b.remove(ch); // take out of the bag
+      List<String> t = state.tray; 
+      t.add(ch); // put into the tray
       SaidCubit yc = BlocProvider.of<SaidCubit>(context);
-      yc.say("bag $ch", context);
+      yc.say("bag $ch", context); // tell the other Player.
+      // note: the other program knows, but the person does not.
 
       emit( GameState
-            (state.iStart,state.score, // state.myTurn,
-           board: state.board, bag: b, tray: t,
-           phase: state.phase, mover:""
+            ( state.iStart,state.score,
+              board: state.board, bag: b, tray: t,
+              phase: state.phase, mover:""
             )
           );
     }
   }
 
-  
+  // a player just clicked on a letter in their tray.  This letter
+  // is now a mover.  We will find out where it is going on the
+  // next click (a different function).
   void startMove( String m )
   { emit
     ( GameState
@@ -121,37 +143,42 @@ class GameCubit extends Cubit<GameState>
     );
   }
 
+  // The player just clicked on a board square.  Put the mover
+  // letter there and tell the other player's program.  
   void endMove( int y, int x, BuildContext context )
   { List<List<Space>> b = state.board;
-    b[y][x] = Space(state.mover);
+    b[y][x] = Space(state.mover); // put the mover-letter in that Space.
     List<String> t = state.tray;
-    t.remove(state.mover);
+    t.remove(state.mover); // take it out of the tray
 
-    SaidCubit sc = BlocProvider.of<SaidCubit>(context);
+    SaidCubit sc = BlocProvider.of<SaidCubit>(context); // tell the other side
     sc.say("place ${state.mover} $y $x", context);
     
     emit
     ( GameState
-      (state.iStart,state.score+1, // state.myTurn,
+      (state.iStart,state.score+1,
            board: b, bag: state.bag, tray: t,
            phase: state.phase, mover:""
       )
     );
   }
 
-  // change state to phase 2.  that will refill the tray and
-  // lead to notify the other player that it is now their turn.
+  // change state to phase 2.  that will lead to refilling the tray and
+  // switching to the other players turn.
+  // This function COULD have just filled the tray HERE, sending messages for each
+  // letter grabbed, and then sent a switchUser message.  Instead phase==2
+  // make the Player page load one character and emits, so it rebuilds a lot. Hmmm.
   void refill()
   { emit
     ( GameState
-      (state.iStart,state.score, // state.myTurn,
+      (state.iStart,state.score, 
            board: state.board, bag: state.bag, tray: state.tray,
            phase: 2, mover:""
       )
     );
   }
 
-  // tell user user it is THEIR turn and set our phase=0 (not our turn)
+  // tell other user it is THEIR turn and set our phase=0 (ie not our turn)
   void switchUser( BuildContext context )
   { SaidCubit sc = BlocProvider.of<SaidCubit>(context);
     sc.say("yourturn",context);
@@ -164,6 +191,11 @@ class GameCubit extends Cubit<GameState>
     );
   }
 
+  // set our own phase=1 (no message needed).
+  // This only gets called for the first turn of the first player,
+  // i.e, the first player fills their tray and keeps the turn,
+  // but every other time, when you fill your tray you give the
+  // turn to the other player.
   void keepUser()
   { emit
     ( GameState
@@ -174,32 +206,6 @@ class GameCubit extends Cubit<GameState>
     );
   }
 
-  /*
-  update( int where, String what )
-  {
-    // state.tttboard[where] = what;
-    state.myTurn = !state.myTurn;
-    emit( GameState(state.iStart,state.myTurn,//state.tttboard,
-           board: state.board, bag: state.bag, tray: state.tray,
-           phase: state.phase, mover:state.mover
-                   ) ) ;
-  }
-
-  // Someone played x or o in this square.  (numbered from
-  // upper left 0,1,2, next row 3,4,5 ... 
-  // Update the board and emit.
-  play( int where )
-  { String mark = state.myTurn==state.iStart? "x":"o";
-    // state.tttboard[where] = mark;
-    state.myTurn = !state.myTurn;
-    emit( GameState(state.iStart,state.myTurn,//state.tttboard,
-             board: state.board, bag: state.bag, tray: state.tray,
-             phase: state.phase, mover: state.mover
-                   ) ) ;
-  }
-  */
-  
-
   // incoming messages are sent here for the game to do
   // whatever with.  Messages we handle:
   // "bag X" where X is a letter ... remove X from the bag.
@@ -208,11 +214,11 @@ class GameCubit extends Cubit<GameState>
   void handle( String msg )
   { List<String> parts = msg.split(" ");
     if ( parts[0] == "bag" )
-    { List<String> b = state.bag;
+    { List<String> b = state.bag; // copy of ref to the bag we are about to change
       b.remove(parts[1]);
       emit
       ( GameState
-        ( state.iStart,state.score, // state.myTurn,
+        ( state.iStart,state.score, 
           board: state.board, bag: b, tray: state.tray,
           phase: state.phase, mover:""
         )
@@ -226,7 +232,7 @@ class GameCubit extends Cubit<GameState>
       b[y][x] = Space(m);
       emit
       ( GameState
-        ( state.iStart,state.score, // state.myTurn,
+        ( state.iStart,state.score, 
           board: b, bag: state.bag, tray: state.tray,
           phase: state.phase, mover:""
         )
@@ -236,13 +242,11 @@ class GameCubit extends Cubit<GameState>
     {
       emit
       ( GameState
-        ( state.iStart,state.score, // state.myTurn,
+        ( state.iStart,state.score, 
           board: state.board, bag: state.bag, tray: state.tray,
           phase: 1, mover:""
         )
       );  
     }
-
-
   }
 }

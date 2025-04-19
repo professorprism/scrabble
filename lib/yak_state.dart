@@ -7,8 +7,9 @@ import "package:flutter_bloc/flutter_bloc.dart";
 // YakState has the socket to another program, over which 
 // you can send messages.
 // The socket is created one way if you are the server,
-// and a different way if you are the client.  Once
-// established, both work the same way.
+// and a different way if you are the client.  
+// So there are two different contructors.
+// Once established, both work the same way.
 
 class YakState
 {
@@ -26,16 +27,6 @@ class YakCubit extends Cubit<YakState>
   YakCubit() : super( YakState( null, false) )
   { connectClient(); }
 
-  // constructor for the server.  It needs the ServerSocket,
-  // which it hangs out there to get a client to call (which
-  // then yields the socket that we communicate through).
-  YakCubit.server( ServerSocket? ss ) 
-  : super( YakState(null, false ) )
-  { if ( ss!=null ) { connectServer(ss); } }
-
-  updateSocket( Socket s ) { emit( YakState(s,false) ); }
-  updateListen() { emit( YakState(state.socket, true ) ); }
-
   // connectClient() calls the server and emits a socket when connected.
   Future<void>  connectClient() async
   { print("------------ YakCubit connectClient running ... ");
@@ -47,6 +38,14 @@ class YakCubit extends Cubit<YakState>
     print('---------- Connected to: ${serv.remoteAddress.address}:${serv.remotePort}');
     updateSocket(serv);
   }
+
+
+  // constructor for the server.  It needs the ServerSocket,
+  // which it hangs out there to get a client to call (which
+  // then yields the socket that we communicate through).
+  YakCubit.server( ServerSocket? ss ) 
+  : super( YakState(null, false ) )
+  { if ( ss!=null ) { connectServer(ss); } }
 
   // connectServer() is given a ServerSocket.  It listens for
   // client to call.  This can take forever, but assuming that a 
@@ -60,6 +59,13 @@ class YakCubit extends Cubit<YakState>
       }
     );
   }
+
+  // Yea, we have a socket.  But it is not listening yet.
+  updateSocket( Socket s ) { emit( YakState(s,false) ); }
+
+  // Ok, NOW it is listening.
+  updateListen() { emit( YakState(state.socket, true ) ); }
+
 
   // put this message on the socket (for the other end
   // to read.

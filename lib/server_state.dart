@@ -8,7 +8,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 // for the server.  Creating the ServerSocket is async,
 // so we launch the process of doing so in the constructor,
 // and then when it succeeds, it emits a new state which
-// has the ServerSocket in place.
+// has the ServerSocket in place.  Some later code starts
+// the server listening.
 class ServerState
 {
    ServerSocket? server;

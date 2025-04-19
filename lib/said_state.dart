@@ -1,7 +1,7 @@
 // said_state.dart
 // Barrett Koster 2025
 
-import "dart:io";
+// import "dart:io";
 import "dart:typed_data";
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
@@ -13,7 +13,7 @@ import "game_state.dart";
 // It has access to the YakCubit so to listen for
 // messages.  And it has access to the GameCubit
 // so that it can send messages to it (to update the
-// state of the game.
+// state of the game).
 
 class SaidState
 {
