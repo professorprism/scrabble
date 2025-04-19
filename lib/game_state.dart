@@ -20,7 +20,7 @@ class Space
 class GameState
 {
   bool iStart;
-  bool myTurn;
+  int score; // bool myTurn;
   int phase; // 0=not my turn, 1=ready to put letters, 2=refill the tray
              // and send turn to other player
              // 3=refill the tray and go to phase 1 (you are first player)
@@ -32,17 +32,17 @@ class GameState
   List<List<Space>> board;
   List<String> bag;
 
-  GameState( this.iStart, this.myTurn, //this.tttboard, 
+  GameState( this.iStart, this.score, // this.myTurn,  
             { required this.board, required this.bag,
               required this.tray, required this.phase,
               required this.mover,
             } 
            );
 
-  GameState.init( this.iStart, this.myTurn, //this.tttboard 
+  GameState.init( this.iStart, this.score, // this.myTurn,  
                 )
   : board = boardInit(), bag = bagInit(), 
-    tray = ['a','b','c'], phase=iStart?3:2, mover=''
+    tray = [], phase=iStart?3:2, mover=''
   ;
 
   static List<List<Space>> boardInit()
@@ -85,7 +85,7 @@ class GameState
 class GameCubit extends Cubit<GameState>
 {
   static final String d = ".";
-  GameCubit( bool myt ): super( GameState.init( myt, myt,   )); 
+  GameCubit( bool myt ): super( GameState.init( myt, 0,   )); 
 
   // move a random letter from the bag to this player's tray.
    void grab( BuildContext context  )
@@ -102,7 +102,7 @@ class GameCubit extends Cubit<GameState>
       yc.say("bag $ch", context);
 
       emit( GameState
-            (state.iStart,state.myTurn,//state.tttboard,
+            (state.iStart,state.score, // state.myTurn,
            board: state.board, bag: b, tray: t,
            phase: state.phase, mover:""
             )
@@ -114,7 +114,7 @@ class GameCubit extends Cubit<GameState>
   void startMove( String m )
   { emit
     ( GameState
-      (state.iStart,state.myTurn,
+      (state.iStart,state.score, // state.myTurn,
            board: state.board, bag: state.bag, tray: state.tray,
            phase: state.phase, mover:m
       )
@@ -132,7 +132,7 @@ class GameCubit extends Cubit<GameState>
     
     emit
     ( GameState
-      (state.iStart,state.myTurn,
+      (state.iStart,state.score+1, // state.myTurn,
            board: b, bag: state.bag, tray: t,
            phase: state.phase, mover:""
       )
@@ -144,7 +144,7 @@ class GameCubit extends Cubit<GameState>
   void refill()
   { emit
     ( GameState
-      (state.iStart,state.myTurn,
+      (state.iStart,state.score, // state.myTurn,
            board: state.board, bag: state.bag, tray: state.tray,
            phase: 2, mover:""
       )
@@ -157,7 +157,7 @@ class GameCubit extends Cubit<GameState>
     sc.say("yourturn",context);
     emit
     ( GameState
-      ( state.iStart,state.myTurn,
+      ( state.iStart,state.score, // state.myTurn,
            board: state.board, bag: state.bag, tray: state.tray,
            phase: 0, mover:""
       )
@@ -167,7 +167,7 @@ class GameCubit extends Cubit<GameState>
   void keepUser()
   { emit
     ( GameState
-      (state.iStart,state.myTurn,
+      (state.iStart,state.score, // state.myTurn,
            board: state.board, bag: state.bag, tray: state.tray,
            phase: 1, mover:""
       )
@@ -212,7 +212,7 @@ class GameCubit extends Cubit<GameState>
       b.remove(parts[1]);
       emit
       ( GameState
-        ( state.iStart,state.myTurn,
+        ( state.iStart,state.score, // state.myTurn,
           board: state.board, bag: b, tray: state.tray,
           phase: state.phase, mover:""
         )
@@ -226,7 +226,7 @@ class GameCubit extends Cubit<GameState>
       b[y][x] = Space(m);
       emit
       ( GameState
-        ( state.iStart,state.myTurn,
+        ( state.iStart,state.score, // state.myTurn,
           board: b, bag: state.bag, tray: state.tray,
           phase: state.phase, mover:""
         )
@@ -236,7 +236,7 @@ class GameCubit extends Cubit<GameState>
     {
       emit
       ( GameState
-        ( state.iStart,state.myTurn,
+        ( state.iStart,state.score, // state.myTurn,
           board: state.board, bag: state.bag, tray: state.tray,
           phase: 1, mover:""
         )

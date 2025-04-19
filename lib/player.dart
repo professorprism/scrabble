@@ -69,6 +69,7 @@ class Player3 extends StatelessWidget
     GameState gs = gc.state;
 
     // in phase 2 or 3, refill your tray, switch user on phase 3 only
+    // when tray is full (or we are out of letters in the bag)
     if ( gs.phase>=2 )
     { if ( gs.tray.length < 7 && gs.bag.length>0 ) // letter can be filled
       { gc.grab( context ); }
@@ -78,7 +79,7 @@ class Player3 extends StatelessWidget
       }
     }
   
-
+    // create the grid of boxes that is the visible board.
     Column grid = Column( children: []);
     for ( int y=0; y<BOARD_SIZE; y++ )
     { Row row = Row( children: []);
@@ -102,12 +103,18 @@ class Player3 extends StatelessWidget
     return Column
     ( children:
       [ grid,
-        (gs.phase==0)
-        ? Text("not my turn")  
-        : ElevatedButton
-          ( onPressed: (){ gc.refill(); },
-            child: Text("end turn"),
-          ),
+        Row
+        ( children:
+          [ Text("score:"),
+            Text("${gs.score}  "),
+            (gs.phase==0)
+            ? Text("not my turn")  
+            : ElevatedButton
+              ( onPressed: (){ gc.refill(); },
+                child: Text("end turn"),
+              ),
+          ],
+        ),
         /*
         Row
         ( children:
@@ -120,8 +127,8 @@ class Player3 extends StatelessWidget
         ),
         */
         tray,
-        Text(ss.said), // for debugging only
-        Text("bag:${bagString}"),
+        // Text(ss.said), // for debugging only
+        // Text("bag:${bagString}"), // debug only
       ],
     );
 
@@ -165,7 +172,7 @@ class BP extends StatelessWidget // place for tile on the board
       child: Container
       ( width: 20, height: 20,
         decoration: BoxDecoration( border: Border.all() ),
-        child: Text(letter),
+        child: Text(letter, style:TextStyle(fontSize:15) ),
       )
     );
   }
