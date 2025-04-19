@@ -68,12 +68,16 @@ class Player3 extends StatelessWidget
     GameCubit gc = BlocProvider.of<GameCubit>(context);
     GameState gs = gc.state;
 
-    // in phase 1, it is this player's turn and if the tray
-    // is not full and there's letters left in the bad, grab
-    // a letter from the bag.
-    if ( gs.phase>2 && gs.tray.length < 7 && gs.bag.length>0 )
-    { gc.grab();
+    // in phase 2 or 3, refill your tray, switch user on phase 3 only
+    if ( gs.phase>=2 )
+    { if ( gs.tray.length < 7 && gs.bag.length>0 ) // letter can be filled
+      { gc.grab( context ); }
+      else // done filling tray, switch user if phase==2
+      { if ( gs.phase==2 ) { gc.switchUser( context ); }
+        else { gc.keepUser(); }
+      }
     }
+  
 
     Column grid = Column( children: []);
     for ( int y=0; y<BOARD_SIZE; y++ )
@@ -90,12 +94,34 @@ class Player3 extends StatelessWidget
     for ( String letter in gs.tray )
     { tray.children.add( BP(letter, -1, x ) ); x++; }
 
+    String bagString = "";
+    for ( String ch in gs.bag )
+    { bagString += ch; }
+
 
     return Column
     ( children:
       [ grid,
-        Text(gs.phase==0?"not my turn":"my turn"),
-        tray
+        (gs.phase==0)
+        ? Text("not my turn")  
+        : ElevatedButton
+          ( onPressed: (){ gc.refill(); },
+            child: Text("end turn"),
+          ),
+        /*
+        Row
+        ( children:
+          [ ElevatedButton
+            ( onPressed: (){ gc.refill(); },
+              child: Text("end turn"),
+            ),
+            Text(gs.phase==0?"not my turn":"my turn"),
+          ],
+        ),
+        */
+        tray,
+        Text(ss.said), // for debugging only
+        Text("bag:${bagString}"),
       ],
     );
 
@@ -124,7 +150,7 @@ class BP extends StatelessWidget // place for tile on the board
       if ( gs.mover=="" && y == -1 ) // pick letter from the tray
       { gc.startMove(letter); }
       else if ( gs.mover!="" && y>=0 )// placing letter on the board
-      { gc.endMove(y,x); }
+      { gc.endMove(y,x, context); }
       else
       { print("------  not correct click"); }
     }

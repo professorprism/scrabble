@@ -29,6 +29,9 @@ class SaidCubit extends Cubit<SaidState>
   // void update( String more ) { emit(SaidState( "${state.said}$more\n" ) ); } 
   void update( String s ) { emit( SaidState(s) ); }
 
+  // listen().  only call this once, to start listening on
+  // the socket in YakState.  Note that whatever message
+  // is received is sent to our GameCubit.handle.
   void listen( BuildContext bc )
   { YakCubit yc = BlocProvider.of<YakCubit>(bc);
     YakState ys = yc.state;
@@ -48,5 +51,12 @@ class SaidCubit extends Cubit<SaidState>
         ys.socket!.close();
       },
     );
+  }
+
+  // This is just a pass-through to YakCubit, so that we have
+  // a uniform interface (all through SaidCubit).
+  void say( String msg, BuildContext context )
+  { YakCubit yc = BlocProvider.of<YakCubit>(context);
+    yc.say(msg);
   }
 }

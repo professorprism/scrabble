@@ -2,7 +2,10 @@
 // Barrett Koster 2025
 
 import "dart:math";
+import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
+
+import "said_state.dart";
 
 // This is where you put whatever the game is about.
 
@@ -39,7 +42,7 @@ class GameState
   GameState.init( this.iStart, this.myTurn, //this.tttboard 
                 )
   : board = boardInit(), bag = bagInit(), 
-    tray = ['a','b','c'], phase=iStart?1:0, mover=''
+    tray = ['a','b','c'], phase=iStart?3:2, mover=''
   ;
 
   static List<List<Space>> boardInit()
@@ -85,7 +88,7 @@ class GameCubit extends Cubit<GameState>
   GameCubit( bool myt ): super( GameState.init( myt, myt,   )); 
 
   // move a random letter from the bag to this player's tray.
-   void grab( )
+   void grab( BuildContext context  )
   { int le = state.bag.length; 
     if ( le > 0 )
     {
@@ -95,12 +98,13 @@ class GameCubit extends Cubit<GameState>
       b.remove(ch);
       List<String> t = state.tray;
       t.add(ch);
-      int p =  ( t.length==7 || b.length==0 )? 2 : 1;
+      SaidCubit yc = BlocProvider.of<SaidCubit>(context);
+      yc.say("bag $ch", context);
 
       emit( GameState
             (state.iStart,state.myTurn,//state.tttboard,
            board: state.board, bag: b, tray: t,
-           phase: p, mover:""
+           phase: state.phase, mover:""
             )
           );
     }
@@ -117,11 +121,14 @@ class GameCubit extends Cubit<GameState>
     );
   }
 
-  void endMove( int y, int x )
+  void endMove( int y, int x, BuildContext context )
   { List<List<Space>> b = state.board;
     b[y][x] = Space(state.mover);
     List<String> t = state.tray;
     t.remove(state.mover);
+
+    SaidCubit sc = BlocProvider.of<SaidCubit>(context);
+    sc.say("place ${state.mover} $y $x", context);
     
     emit
     ( GameState
@@ -132,6 +139,42 @@ class GameCubit extends Cubit<GameState>
     );
   }
 
+  // change state to phase 2.  that will refill the tray and
+  // lead to notify the other player that it is now their turn.
+  void refill()
+  { emit
+    ( GameState
+      (state.iStart,state.myTurn,
+           board: state.board, bag: state.bag, tray: state.tray,
+           phase: 2, mover:""
+      )
+    );
+  }
+
+  // tell user user it is THEIR turn and set our phase=0 (not our turn)
+  void switchUser( BuildContext context )
+  { SaidCubit sc = BlocProvider.of<SaidCubit>(context);
+    sc.say("yourturn",context);
+    emit
+    ( GameState
+      ( state.iStart,state.myTurn,
+           board: state.board, bag: state.bag, tray: state.tray,
+           phase: 0, mover:""
+      )
+    );
+  }
+
+  void keepUser()
+  { emit
+    ( GameState
+      (state.iStart,state.myTurn,
+           board: state.board, bag: state.bag, tray: state.tray,
+           phase: 1, mover:""
+      )
+    );
+  }
+
+  /*
   update( int where, String what )
   {
     // state.tttboard[where] = what;
@@ -154,15 +197,50 @@ class GameCubit extends Cubit<GameState>
              phase: state.phase, mover: state.mover
                    ) ) ;
   }
+  */
+  
 
   // incoming messages are sent here for the game to do
-  // whatever with.  in this case, "sq NUM" messages ..
-  // we send the number to be played.
+  // whatever with.  Messages we handle:
+  // "bag X" where X is a letter ... remove X from the bag.
+  // "place X y x" puts letter X at coords y,x
+  // "yourturn"  tells us it is OUR turn.
   void handle( String msg )
   { List<String> parts = msg.split(" ");
-    if ( parts[0] == "sq" )
-    { int sqNum = int.parse(parts[1]);
-      play(sqNum);
+    if ( parts[0] == "bag" )
+    { List<String> b = state.bag;
+      b.remove(parts[1]);
+      emit
+      ( GameState
+        ( state.iStart,state.myTurn,
+          board: state.board, bag: b, tray: state.tray,
+          phase: state.phase, mover:""
+        )
+      );
+    }
+    else if ( parts[0] == "place")
+    { String m = parts[1];
+      int y = int.parse(parts[2]);
+      int x = int.parse(parts[3]);
+      List<List<Space>> b = state.board;
+      b[y][x] = Space(m);
+      emit
+      ( GameState
+        ( state.iStart,state.myTurn,
+          board: b, bag: state.bag, tray: state.tray,
+          phase: state.phase, mover:""
+        )
+      );  
+    }
+    else if ( parts[0]=="yourturn")
+    {
+      emit
+      ( GameState
+        ( state.iStart,state.myTurn,
+          board: state.board, bag: state.bag, tray: state.tray,
+          phase: 1, mover:""
+        )
+      );  
     }
 
 
