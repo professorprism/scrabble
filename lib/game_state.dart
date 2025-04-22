@@ -22,25 +22,26 @@ class Space
 class GameState
 {
   bool iStart; // true iff this player gets the first turn.
-  int score; // just a letter count at this point.
+  
+  List<String> tray; // up to 7 letters you can place on the board
+  List<List<Space>> board; // where the letters are played
+     // the order is a column of rows
+  List<String> bag; // letters left to be used
 
   // phase really controls the flow of the game.  Each phase allows
   // certain actions, and when you do an action, it potentially advances
   // the phase to something else.
   int phase; // 0=not my turn, 1=my turn, ready to put letters, 2=refill the tray
-             // and send turn to other player (phase=0 for us).
+             // and send turn to other player (phase=0 for this Player).
              // 3=refill the tray and go to phase 1 (you are first player)
 
   // mover is also a flow controller, just two states, letter or blank.  
   String mover; // a letter that is being moved from tray to board.
                 // "" if not in moving process.
+  
+  int score; // just a letter count at this point.
 
-  List<String> tray; // up to 7 letters you can place on the board
-
-  List<List<Space>> board; // where the letters are played
-     // the order is a column of rows
-  List<String> bag; // letters left to be used
-
+ 
   GameState( this.iStart, this.score,   
             { required this.board, required this.bag,
               required this.tray, required this.phase,

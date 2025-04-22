@@ -109,7 +109,7 @@ class Player3 extends StatelessWidget
     // Here is the actual Widget tree to display
     return Column
     ( children:
-      [ grid,
+      [ grid, // don't miss this!
         Row
         ( children:
           [ Text("score:"),
